@@ -146,10 +146,31 @@ def predict_safety_alert(data: dict) -> dict:
 
 
 def predict_event_type(data: dict) -> dict:
+    speed = data.get("speed_kmh", 5)
+    distance = data.get("worker_distance_m", 15)
+    temp = data.get("engine_temp_c", 80)
+    risk = {"LOW": 0, "MEDIUM": 1, "HIGH": 2}.get(data.get("risk_level", "LOW"), 0)
+    hour = data.get("hour_of_day", 9)
+
     row = {
         "seatbelt_status": 0 if data.get("seatbelt_status") == "Fastened" else 1,
-        "risk_level": {"LOW": 0, "MEDIUM": 1, "HIGH": 2}.get(data.get("risk_level", "LOW"), 0),
+        "risk_level": risk,
         "shift_type": _shift_encode(data.get("shift_type", "day")),
+        "speed_kmh": speed,
+        "worker_distance_m": distance,
+        "engine_temp_c": temp,
+        "hour_of_day": hour,
+        "day_of_week": data.get("day_of_week", 0),
+        "is_night": 1 if hour < 6 or hour >= 20 else 0,
+        "resolved": data.get("resolved", 0),
+        "response_time_sec": data.get("response_time_sec", 6.0),
+        "is_close_worker": 1 if distance < 3.0 else 0,
+        "is_high_speed": 1 if speed > 8.0 else 0,
+        "is_high_temp": 1 if temp > 95.0 else 0,
+        "speed_x_distance": speed * distance,
+        "temp_speed_ratio": temp / (speed + 0.1),
+        "risk_x_speed": risk * speed,
+        "risk_x_distance": risk * distance,
     }
     try:
         row["weather"] = _event_weather_enc.transform([data.get("weather", "Sunny")])[0]
@@ -159,12 +180,6 @@ def predict_event_type(data: dict) -> dict:
         row["machine_type"] = _event_machine_enc.transform([data.get("machine_type", "Dozer")])[0]
     except ValueError:
         row["machine_type"] = 0
-
-    numeric_fields = {
-        "speed_kmh": 5, "worker_distance_m": 15, "engine_temp_c": 80
-    }
-    for field, default in numeric_fields.items():
-        row[field] = data.get(field, default)
 
     X = pd.DataFrame([row])[_event_features]
     prediction = int(_event_model.predict(X)[0])
