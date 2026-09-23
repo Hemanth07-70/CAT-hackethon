@@ -146,31 +146,38 @@ def predict_safety_alert(data: dict) -> dict:
 
 
 def predict_event_type(data: dict) -> dict:
-    speed = data.get("speed_kmh", 5)
+    speed  = data.get("speed_kmh", 5)
     distance = data.get("worker_distance_m", 15)
-    temp = data.get("engine_temp_c", 80)
-    risk = {"LOW": 0, "MEDIUM": 1, "HIGH": 2}.get(data.get("risk_level", "LOW"), 0)
-    hour = data.get("hour_of_day", 9)
+    temp   = data.get("engine_temp_c", 80)
+    risk   = {"LOW": 0, "MEDIUM": 1, "HIGH": 2}.get(data.get("risk_level", "LOW"), 0)
+    hour   = data.get("hour_of_day", 9)
+    fuel   = data.get("fuel_rate_lph", 8.0)
+    accel  = data.get("acceleration_events", 1)
 
     row = {
-        "seatbelt_status": 0 if data.get("seatbelt_status") == "Fastened" else 1,
-        "risk_level": risk,
-        "shift_type": _shift_encode(data.get("shift_type", "day")),
-        "speed_kmh": speed,
-        "worker_distance_m": distance,
-        "engine_temp_c": temp,
-        "hour_of_day": hour,
-        "day_of_week": data.get("day_of_week", 0),
-        "is_night": 1 if hour < 6 or hour >= 20 else 0,
-        "resolved": data.get("resolved", 0),
-        "response_time_sec": data.get("response_time_sec", 6.0),
-        "is_close_worker": 1 if distance < 3.0 else 0,
-        "is_high_speed": 1 if speed > 8.0 else 0,
-        "is_high_temp": 1 if temp > 95.0 else 0,
-        "speed_x_distance": speed * distance,
-        "temp_speed_ratio": temp / (speed + 0.1),
-        "risk_x_speed": risk * speed,
-        "risk_x_distance": risk * distance,
+        "seatbelt_status":     0 if data.get("seatbelt_status") == "Fastened" else 1,
+        "risk_level":          risk,
+        "shift_type":          _shift_encode(data.get("shift_type", "day")),
+        "speed_kmh":           speed,
+        "worker_distance_m":   distance,
+        "engine_temp_c":       temp,
+        "fuel_rate_lph":       fuel,
+        "acceleration_events": accel,
+        "hour_of_day":         hour,
+        "day_of_week":         data.get("day_of_week", 0),
+        "is_night":            1 if hour < 6 or hour >= 20 else 0,
+        "resolved":            data.get("resolved", 0),
+        "response_time_sec":   data.get("response_time_sec", 6.0),
+        "is_close_worker":     1 if distance < 3.0 else 0,
+        "is_high_speed":       1 if speed > 10.0 else 0,
+        "is_high_temp":        1 if temp > 98.0 else 0,
+        "is_high_fuel":        1 if fuel > 17.0 else 0,
+        "is_erratic":          1 if accel >= 5 else 0,
+        "speed_x_distance":    speed * distance,
+        "temp_speed_ratio":    temp / (speed + 0.1),
+        "fuel_x_accel":        fuel * accel,
+        "risk_x_speed":        risk * speed,
+        "risk_x_distance":     risk * distance,
     }
     try:
         row["weather"] = _event_weather_enc.transform([data.get("weather", "Sunny")])[0]

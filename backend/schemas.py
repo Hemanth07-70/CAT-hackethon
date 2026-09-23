@@ -168,6 +168,10 @@ class EventTypeRequest(BaseModel):
     engine_temp_c: float
     seatbelt_status: str
     risk_level: str
+    fuel_rate_lph: Optional[float] = 8.0
+    acceleration_events: Optional[int] = 1
+    hour_of_day: Optional[int] = 9
+    response_time_sec: Optional[float] = 6.0
     weather: str = "Sunny"
     shift_type: str = "day"
 
