@@ -1,0 +1,10 @@
+.DS_Store
+.Rhistory
+__pycache__/
+*.pyc
+*.pyo
+*.pkl
+*.db
+*.sqlite3
+ml/saved_models/
+.env
