@@ -10,6 +10,7 @@ from database import engine, SessionLocal
 import db_models
 from ml_service import load_all_models
 from routers import predict, tasks, telemetry, incidents, operators, dashboard
+from routers import websocket_alerts, metrics
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../ml"))
 
@@ -108,6 +109,8 @@ app.include_router(telemetry.router)
 app.include_router(incidents.router)
 app.include_router(operators.router)
 app.include_router(dashboard.router)
+app.include_router(metrics.router)
+app.include_router(websocket_alerts.router)
 
 
 @app.get("/", tags=["Health"])

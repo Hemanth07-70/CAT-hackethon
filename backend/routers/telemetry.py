@@ -1,6 +1,8 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, Query
+from fastapi.concurrency import run_until_first_complete
 from sqlalchemy.orm import Session
+import asyncio
 from database import get_db
 from db_models import TelemetryLog
 from schemas import TelemetryInput, TelemetryResponse
@@ -14,9 +16,10 @@ router = APIRouter(prefix="/telemetry", tags=["Telemetry"])
     response_model=TelemetryResponse,
     status_code=201,
     summary="Ingest telemetry reading",
-    description="Accepts a real-time machine telemetry snapshot. Runs anomaly detection and safety alert prediction automatically."
+    description="Accepts a real-time machine telemetry snapshot. Runs anomaly detection and safety alert prediction automatically. Broadcasts WebSocket alert if safety alert or anomaly detected."
 )
-def ingest(req: TelemetryInput, db: Session = Depends(get_db)):
+async def ingest(req: TelemetryInput, db: Session = Depends(get_db)):
+    from routers.websocket_alerts import manager
     data = req.model_dump()
 
     anomaly_result = predict_anomaly(data)
@@ -41,6 +44,22 @@ def ingest(req: TelemetryInput, db: Session = Depends(get_db)):
     db.add(log)
     db.commit()
     db.refresh(log)
+
+    if safety_result["alert_triggered"] or anomaly_result["is_anomaly"]:
+        await manager.broadcast({
+            "type": "ALERT",
+            "machine_id": req.machine_id,
+            "operator_id": req.operator_id,
+            "timestamp": req.timestamp,
+            "safety_alert": safety_result["alert_triggered"],
+            "alert_probability": safety_result["alert_probability"],
+            "anomaly_detected": anomaly_result["is_anomaly"],
+            "anomaly_probability": anomaly_result["anomaly_probability"],
+            "risk_level": req.risk_level,
+            "seatbelt_status": req.seatbelt_status,
+            "worker_distance_m": req.worker_distance_m,
+        })
+
     return log
 
 
